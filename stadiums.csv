@@ -1,0 +1,17 @@
+id_estadio,nombre_estadio,ciudad,capacidad,codigo_postal
+EST_AZT,Estadio Azteca,Mexico City,87523,04650
+EST_AKR,Estadio Akron,Guadalajara,48071,45010
+EST_BBV,Estadio BBVA,Monterrey,53500,67140
+EST_MET,MetLife Stadium,New York/New Jersey,82500,07073
+EST_ATT,AT&T Stadium,Dallas,94000,76011
+EST_MBZ,Mercedes-Benz Stadium,Atlanta,71000,30313
+EST_SOF,SoFi Stadium,Los Angeles,70240,90301
+EST_LIN,Lincoln Financial Field,Philadelphia,69000,19148
+EST_LUM,Lumen Field,Seattle,69000,98134
+EST_LEV,Levi's Stadium,San Francisco Bay Area,71000,95054
+EST_NRG,NRG Stadium,Houston,72220,77054
+EST_ARR,GEHA Field at Arrowhead Stadium,Kansas City,76416,64129
+EST_GNS,Gillette Stadium,Boston,65878,02035
+EST_HRK,Hard Rock Stadium,Miami,65326,33056
+EST_BCP,BC Place,Vancouver,54500,V6B 4Y8
+EST_BMO,BMO Field,Toronto,45000,M6K 3C3
