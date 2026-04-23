@@ -1,0 +1,33 @@
+Grupo,Fecha,Hora_UTC,Equipo_1,Equipo_2,Sede
+R32,2026-06-28,12:00 UTC-7,2A,2B,Los Angeles (Inglewood)
+R32,2026-06-29,16:30 UTC-4,1E,3A/B/C/D/F,Boston (Foxborough)
+R32,2026-06-29,19:00 UTC-6,1F,2C,Monterrey (Guadalupe)
+R32,2026-06-29,12:00 UTC-5,1C,2F,Houston
+R32,2026-06-30,17:00 UTC-4,1I,3C/D/F/G/H,New York/New Jersey (East Rutherford)
+R32,2026-06-30,12:00 UTC-5,2E,2I,Dallas (Arlington)
+R32,2026-06-30,19:00 UTC-6,1A,3C/E/F/H/I,Mexico City
+R32,2026-07-01,12:00 UTC-4,1L,3E/H/I/J/K,Atlanta
+R32,2026-07-01,17:00 UTC-7,1D,3B/E/F/I/J,San Francisco Bay Area (Santa Clara)
+R32,2026-07-01,13:00 UTC-7,1G,3A/E/H/I/J,Seattle
+R32,2026-07-02,19:00 UTC-4,2K,2L,Toronto
+R32,2026-07-02,12:00 UTC-7,1H,2J,Los Angeles (Inglewood)
+R32,2026-07-02,20:00 UTC-7,1B,3E/F/G/I/J,Vancouver
+R32,2026-07-03,18:00 UTC-4,1J,2H,Miami (Miami Gardens)
+R32,2026-07-03,20:30 UTC-5,1K,3D/E/I/J/L,Kansas City
+R32,2026-07-03,13:00 UTC-5,2D,2G,Dallas (Arlington)
+R16,2026-07-04,17:00 UTC-4,W74,W77,Philadelphia
+R16,2026-07-04,12:00 UTC-5,W73,W75,Houston
+R16,2026-07-05,16:00 UTC-4,W76,W78,New York/New Jersey (East Rutherford)
+R16,2026-07-05,18:00 UTC-6,W79,W80,Mexico City
+R16,2026-07-06,14:00 UTC-5,W83,W84,Dallas (Arlington)
+R16,2026-07-06,17:00 UTC-7,W81,W82,Seattle
+R16,2026-07-07,12:00 UTC-4,W86,W88,Atlanta
+R16,2026-07-07,13:00 UTC-7,W85,W87,Vancouver
+QF,2026-07-09,16:00 UTC-4,W89,W90,Boston (Foxborough)
+QF,2026-07-10,12:00 UTC-7,W93,W94,Los Angeles (Inglewood)
+QF,2026-07-11,17:00 UTC-4,W91,W92,Miami (Miami Gardens)
+QF,2026-07-11,20:00 UTC-5,W95,W96,Kansas City
+SF,2026-07-14,14:00 UTC-5,W97,W98,Dallas (Arlington)
+SF,2026-07-15,15:00 UTC-4,W99,W100,Atlanta
+3P,2026-07-18,17:00 UTC-4,L101,L102,Miami (Miami Gardens)
+F,2026-07-19,15:00 UTC-4,W101,W102,New York/New Jersey (East Rutherford)
