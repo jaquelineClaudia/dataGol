@@ -8,3 +8,5 @@ pytrends
 requests
 beautifulsoup4
 openpyxl
+xgboost
+streamlit

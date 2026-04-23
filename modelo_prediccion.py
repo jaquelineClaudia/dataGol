@@ -1,13 +1,16 @@
 """
 modelo_prediccion.py
 ====================
-Entrena y evalúa dos modelos:
+Entrena y evalúa tres modelos:
   1. Regresión Logística — interpretable, con probabilidades
-  2. Random Forest — más preciso, con feature importance
+  2. Random Forest       — preciso, con feature importance
+  3. XGBoost             — gradient boosting, alta precisión
 
 Genera:
-  - probabilidades_ganador_2026.csv  → equipos ordenados por probabilidad
-  - metricas_modelos.csv             → comparativa de performance
+  - probabilidades_ganador_2026.csv   → equipos ordenados por probabilidad
+  - metricas_modelos.csv              → comparativa legacy (compatibilidad)
+  - comparativa_modelos.csv           → comparativa completa con 3 modelos
+  - feature_importance.csv            → importancia de variables (RF)
 """
 
 import sys
@@ -19,19 +22,22 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import (
-    classification_report, roc_auc_score,
-    confusion_matrix, accuracy_score
-)
 import warnings
 warnings.filterwarnings('ignore')
 
-print("=" * 60)
-print("🏆 MODELO PREDICTIVO — MUNDIAL 2026")
-print("=" * 60)
+try:
+    from xgboost import XGBClassifier
+    XGBOOST_OK = True
+except ImportError:
+    print("⚠️  XGBoost no instalado. Ejecuta: pip install xgboost")
+    XGBOOST_OK = False
+
+print("=" * 65)
+print("  🏆 MODELO PREDICTIVO — MUNDIAL 2026  (v2: +XGBoost)")
+print("=" * 65)
 
 # ─────────────────────────────────────────────
-# CARGAR Y PREPARAR
+# CARGAR Y PREPARAR DATOS
 # ─────────────────────────────────────────────
 df = pd.read_csv('dataset_modelo.csv')
 
@@ -47,53 +53,50 @@ y = df['gano'].copy()
 X = X.replace([np.inf, -np.inf], np.nan)
 for col in features:
     X[col] = pd.to_numeric(X[col], errors='coerce')
-    if X[col].isna().all():
-        X[col] = 0
-    else:
-        X[col] = X[col].fillna(X[col].median())
+    X[col] = X[col].fillna(X[col].median() if not X[col].isna().all() else 0)
 
-# El ranking FIFA: menor número = mejor equipo → lo invertimos
+# Ranking FIFA invertido: menor número de posición → mayor valor de feature
 X['ranking_fifa'] = 1 / (X['ranking_fifa'] + 1)
 
-# Escalar para regresión logística
-scaler = StandardScaler()
+# Escalar para Regresión Logística
+scaler   = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 X_scaled = pd.DataFrame(X_scaled, columns=features)
 
-print(f"\n📋 Dataset: {len(df)} equipos | {len(features)} features")
-print(f"   Equipos con mundial ganado: {y.sum()} | Sin mundial: {(y==0).sum()}")
+n_pos = int(y.sum())
+n_neg = int((y == 0).sum())
+print(f"\n  Dataset: {len(df)} equipos | {len(features)} features")
+print(f"  Ganadores históricos: {n_pos} | Sin mundial: {n_neg}")
+print(f"  Desbalance: 1:{n_neg // n_pos if n_pos else 'N/A'}")
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 # ─────────────────────────────────────────────
 # 1. REGRESIÓN LOGÍSTICA
 # ─────────────────────────────────────────────
-print("\n\n🔵 MODELO 1: REGRESIÓN LOGÍSTICA")
-print("-" * 40)
+print("\n\n  🔵 MODELO 1: REGRESIÓN LOGÍSTICA")
+print("  " + "─" * 45)
 
 lr = LogisticRegression(
-    class_weight='balanced',  # importante: dataset desbalanceado
+    class_weight='balanced',
     max_iter=1000,
     random_state=42,
     C=0.5
 )
 
-# Cross-validation estratificada (mejor para datasets pequeños)
-cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_scores_lr = cross_val_score(lr, X_scaled, y, cv=cv, scoring='roc_auc')
-
-print(f"  AUC-ROC (cross-val 5-fold): {cv_scores_lr.mean():.4f} ± {cv_scores_lr.std():.4f}")
-print(f"  Scores por fold: {[round(s, 3) for s in cv_scores_lr]}")
-
-# Entrenar con todos los datos para predicción
 lr.fit(X_scaled, y)
 proba_lr = lr.predict_proba(X_scaled)[:, 1]
-
 df['proba_logistica'] = proba_lr
+
+print(f"  AUC-ROC (5-fold cv): {cv_scores_lr.mean():.4f} ± {cv_scores_lr.std():.4f}")
+print(f"  Scores por fold:     {[round(s, 4) for s in cv_scores_lr]}")
 
 # ─────────────────────────────────────────────
 # 2. RANDOM FOREST
 # ─────────────────────────────────────────────
-print("\n\n🟢 MODELO 2: RANDOM FOREST")
-print("-" * 40)
+print("\n\n  🟢 MODELO 2: RANDOM FOREST")
+print("  " + "─" * 45)
 
 rf = RandomForestClassifier(
     n_estimators=500,
@@ -104,81 +107,173 @@ rf = RandomForestClassifier(
 )
 
 cv_scores_rf = cross_val_score(rf, X, y, cv=cv, scoring='roc_auc')
-
-print(f"  AUC-ROC (cross-val 5-fold): {cv_scores_rf.mean():.4f} ± {cv_scores_rf.std():.4f}")
-print(f"  Scores por fold: {[round(s, 3) for s in cv_scores_rf]}")
-
-# Entrenar con todos los datos
 rf.fit(X, y)
 proba_rf = rf.predict_proba(X)[:, 1]
 df['proba_rf'] = proba_rf
 
+print(f"  AUC-ROC (5-fold cv): {cv_scores_rf.mean():.4f} ± {cv_scores_rf.std():.4f}")
+print(f"  Scores por fold:     {[round(s, 4) for s in cv_scores_rf]}")
+
 # ─────────────────────────────────────────────
-# 3. PROBABILIDAD COMBINADA (ensemble)
+# 3. XGBOOST
 # ─────────────────────────────────────────────
-# Promedio ponderado: más peso al que tiene mejor AUC
-peso_lr = cv_scores_lr.mean()
-peso_rf = cv_scores_rf.mean()
-total   = peso_lr + peso_rf
+print("\n\n  🟠 MODELO 3: XGBOOST")
+print("  " + "─" * 45)
+
+if XGBOOST_OK:
+    scale_pos = n_neg / n_pos if n_pos > 0 else 1.0
+
+    xgb = XGBClassifier(
+        n_estimators=500,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        scale_pos_weight=scale_pos,   # maneja el desbalance de clases
+        random_state=42,
+        eval_metric='auc',
+        verbosity=0,
+        use_label_encoder=False
+    )
+
+    cv_scores_xgb = cross_val_score(xgb, X, y, cv=cv, scoring='roc_auc')
+    xgb.fit(X, y)
+    proba_xgb = xgb.predict_proba(X)[:, 1]
+    df['proba_xgb'] = proba_xgb
+
+    print(f"  AUC-ROC (5-fold cv): {cv_scores_xgb.mean():.4f} ± {cv_scores_xgb.std():.4f}")
+    print(f"  Scores por fold:     {[round(s, 4) for s in cv_scores_xgb]}")
+    print(f"  scale_pos_weight:    {scale_pos:.1f}  (ratio neg/pos)")
+else:
+    cv_scores_xgb = np.array([0.0])
+    df['proba_xgb'] = df['proba_rf']   # fallback
+    print("  ⚠️  XGBoost no disponible — usando RF como fallback")
+
+# ─────────────────────────────────────────────
+# 4. ENSEMBLE PONDERADO (LR + RF + XGBoost)
+# ─────────────────────────────────────────────
+# Pesos proporcionales al AUC de cada modelo
+peso_lr  = cv_scores_lr.mean()
+peso_rf  = cv_scores_rf.mean()
+peso_xgb = cv_scores_xgb.mean() if XGBOOST_OK else 0.0
+total    = peso_lr + peso_rf + peso_xgb
 
 df['proba_final'] = (
-    (peso_lr / total) * df['proba_logistica'] +
-    (peso_rf / total) * df['proba_rf']
+    (peso_lr  / total) * df['proba_logistica'] +
+    (peso_rf  / total) * df['proba_rf']         +
+    (peso_xgb / total) * df['proba_xgb']
 )
 
+w_lr  = round(peso_lr  / total * 100, 1)
+w_rf  = round(peso_rf  / total * 100, 1)
+w_xgb = round(peso_xgb / total * 100, 1)
+print(f"\n  📐 Pesos del ensemble:")
+print(f"     LR: {w_lr}% | RF: {w_rf}% | XGBoost: {w_xgb}%")
+
 # ─────────────────────────────────────────────
-# 4. FEATURE IMPORTANCE (Random Forest)
+# 5. FEATURE IMPORTANCE (Random Forest)
 # ─────────────────────────────────────────────
-print("\n\n📊 IMPORTANCIA DE VARIABLES (Random Forest)")
-print("-" * 40)
+print("\n\n  📊 IMPORTANCIA DE VARIABLES (Random Forest)")
+print("  " + "─" * 45)
 
 importancias = pd.Series(rf.feature_importances_, index=features)
-importancias_sorted = importancias.sort_values(ascending=False)
+importancias = importancias.sort_values(ascending=False)
 
-for feat, imp in importancias_sorted.items():
+for feat, imp in importancias.items():
     barra = "█" * int(imp * 50)
     print(f"  {feat:<25} {barra} {imp:.4f}")
 
 # ─────────────────────────────────────────────
-# 5. RANKING DE FAVORITOS PARA 2026
+# 6. RANKING DE FAVORITOS 2026
 # ─────────────────────────────────────────────
-print("\n\n🏆 TOP 20 FAVORITOS AL MUNDIAL 2026")
-print("-" * 50)
+print("\n\n  🏆 TOP 20 FAVORITOS AL MUNDIAL 2026")
+print("  " + "─" * 60)
 
-ranking_prediccion = df[['equipo', 'proba_final', 'proba_logistica', 'proba_rf', 'confederacion']].copy()
-ranking_prediccion = ranking_prediccion.sort_values('proba_final', ascending=False).reset_index(drop=True)
-ranking_prediccion.index += 1  # empezar en 1
+ranking = df[['equipo', 'proba_final', 'proba_logistica',
+              'proba_rf', 'proba_xgb', 'confederacion']].copy()
+ranking = ranking.sort_values('proba_final', ascending=False).reset_index(drop=True)
+ranking.index += 1
 
-ranking_prediccion['proba_final_%']    = (ranking_prediccion['proba_final']    * 100).round(1).astype(str) + '%'
-ranking_prediccion['proba_logistica_%'] = (ranking_prediccion['proba_logistica'] * 100).round(1).astype(str) + '%'
-ranking_prediccion['proba_rf_%']       = (ranking_prediccion['proba_rf']       * 100).round(1).astype(str) + '%'
+ranking['proba_final_%']     = (ranking['proba_final']     * 100).round(1).astype(str) + '%'
+ranking['proba_logistica_%'] = (ranking['proba_logistica'] * 100).round(1).astype(str) + '%'
+ranking['proba_rf_%']        = (ranking['proba_rf']        * 100).round(1).astype(str) + '%'
+ranking['proba_xgb_%']       = (ranking['proba_xgb']       * 100).round(1).astype(str) + '%'
 
-top20 = ranking_prediccion.head(20)[['equipo', 'confederacion', 'proba_final_%', 'proba_logistica_%', 'proba_rf_%']]
-top20.columns = ['Equipo', 'Confederación', 'Prob. Final', 'Regr. Logística', 'Random Forest']
+top20 = ranking.head(20)[[
+    'equipo', 'confederacion', 'proba_final_%',
+    'proba_logistica_%', 'proba_rf_%', 'proba_xgb_%'
+]]
+top20.columns = ['Equipo', 'Confederación', 'Prob. Final', 'Log. Reg.', 'Rnd. Forest', 'XGBoost']
 print(top20.to_string())
 
 # ─────────────────────────────────────────────
-# 6. GUARDAR RESULTADOS
+# 7. GUARDAR RESULTADOS
 # ─────────────────────────────────────────────
-ranking_prediccion.to_csv('probabilidades_ganador_2026.csv', index=True)
+ranking.to_csv('probabilidades_ganador_2026.csv', index=True)
 
-metricas = pd.DataFrame({
-    'Modelo': ['Regresión Logística', 'Random Forest', 'Ensemble (combinado)'],
+# Comparativa de los 3 modelos (archivo principal)
+comparativa = pd.DataFrame({
+    'Modelo': ['Regresión Logística', 'Random Forest', 'XGBoost',
+               'Ensemble (ponderado)'],
+    'AUC_ROC_media': [
+        round(cv_scores_lr.mean(),  4),
+        round(cv_scores_rf.mean(),  4),
+        round(cv_scores_xgb.mean(), 4) if XGBOOST_OK else None,
+        None
+    ],
+    'AUC_ROC_std': [
+        round(cv_scores_lr.std(),  4),
+        round(cv_scores_rf.std(),  4),
+        round(cv_scores_xgb.std(), 4) if XGBOOST_OK else None,
+        None
+    ],
+    'AUC_ROC_display': [
+        f"{cv_scores_lr.mean():.4f} ± {cv_scores_lr.std():.4f}",
+        f"{cv_scores_rf.mean():.4f} ± {cv_scores_rf.std():.4f}",
+        f"{cv_scores_xgb.mean():.4f} ± {cv_scores_xgb.std():.4f}"
+        if XGBOOST_OK else 'N/A',
+        f'Promedio ponderado ({w_lr}% LR / {w_rf}% RF / {w_xgb}% XGB)'
+    ],
+    'Peso_Ensemble_%': [w_lr, w_rf, w_xgb, 100.0]
+})
+comparativa.to_csv('comparativa_modelos.csv', index=False)
+
+# Archivo legacy para compatibilidad
+metricas_legacy = pd.DataFrame({
+    'Modelo': ['Regresión Logística', 'Random Forest',
+               'XGBoost', 'Ensemble (combinado)'],
     'AUC-ROC (cv)': [
         f"{cv_scores_lr.mean():.4f} ± {cv_scores_lr.std():.4f}",
         f"{cv_scores_rf.mean():.4f} ± {cv_scores_rf.std():.4f}",
-        'N/A (promedio ponderado)'
+        f"{cv_scores_xgb.mean():.4f} ± {cv_scores_xgb.std():.4f}"
+        if XGBOOST_OK else 'N/A',
+        f'Ponderado ({w_lr}/{w_rf}/{w_xgb}%)'
     ]
 })
-metricas.to_csv('metricas_modelos.csv', index=False)
+metricas_legacy.to_csv('metricas_modelos.csv', index=False)
 
-importancias_df = importancias_sorted.reset_index()
+importancias_df = importancias.reset_index()
 importancias_df.columns = ['variable', 'importancia']
 importancias_df.to_csv('feature_importance.csv', index=False)
 
-print(f"\n\n✅ Modelos entrenados y guardados.")
-print("   Archivos:")
-print("   - probabilidades_ganador_2026.csv")
-print("   - metricas_modelos.csv")
-print("   - feature_importance.csv")
-print(f"\n🎯 PREDICCIÓN: el favorito según el modelo es → {ranking_prediccion.iloc[0]['equipo']}")
+print(f"\n\n  ✅ Modelos entrenados y guardados.")
+print("     Archivos generados:")
+print("     - probabilidades_ganador_2026.csv")
+print("     - comparativa_modelos.csv")
+print("     - metricas_modelos.csv")
+print("     - feature_importance.csv")
+
+print(f"\n  🎯 FAVORITO 2026 → {ranking.iloc[0]['equipo']}  "
+      f"({ranking.iloc[0]['proba_final_%']})")
+
+# ─────────────────────────────────────────────
+# 8. TABLA COMPARATIVA FINAL
+# ─────────────────────────────────────────────
+print(f"\n\n  📈 COMPARATIVA DE MODELOS")
+print("  " + "─" * 55)
+for _, row in comparativa.iterrows():
+    if row['AUC_ROC_media'] is not None:
+        barra = "█" * int(row['AUC_ROC_media'] * 50)
+        print(f"  {row['Modelo']:<25} {barra} {row['AUC_ROC_display']}")
+    else:
+        print(f"  {row['Modelo']:<25} {row['AUC_ROC_display']}")
