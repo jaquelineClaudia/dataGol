@@ -9,6 +9,9 @@ Genera todas las gráficas del proyecto:
   5. Comparativa: ganadores vs no ganadores
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -147,7 +150,10 @@ print("  ✅ grafica_top20_favoritos.png")
 fig, ax = plt.subplots(figsize=(10, 6))
 fig.patch.set_facecolor('#0a0a1a')
 
-df_conf = proba.merge(df[['equipo', 'confederacion']], on='equipo', how='left')
+df_conf = proba.copy()
+if 'confederacion' not in df_conf.columns:
+    df_conf = df_conf.merge(df[['equipo', 'confederacion']], on='equipo', how='left')
+df_conf = df_conf.dropna(subset=['confederacion'])
 conf_avg = df_conf.groupby('confederacion')['proba_final'].mean().sort_values(ascending=False) * 100
 
 colores_conf = [GOLD, '#FFA500', '#4a6fa5', '#2e86ab', '#1b4f72', '#7fb3d3'][:len(conf_avg)]

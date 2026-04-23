@@ -1,0 +1,4 @@
+Modelo,AUC-ROC (cv)
+Regresión Logística,0.9660 ± 0.0509
+Random Forest,0.9856 ± 0.0140
+Ensemble (combinado),N/A (promedio ponderado)

@@ -1,0 +1,10 @@
+variable,correlacion,p_value,significativa
+ranking_fifa,0.7326,0.0,✅ SÍ
+racha_reciente,0.2213,0.001,✅ SÍ
+diferencia_goles,0.0744,0.2753,❌ NO
+gano_penales_pct,0.0367,0.5905,❌ NO
+goles_favor_avg,0.0294,0.6669,❌ NO
+confederacion_cod,-0.0211,0.757,❌ NO
+es_local,-0.0268,0.6945,❌ NO
+goles_contra_avg,-0.0807,0.2366,❌ NO
+interes_google,-0.4168,0.0,✅ SÍ

@@ -10,6 +10,9 @@ Genera:
   - metricas_modelos.csv             → comparativa de performance
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -47,7 +50,7 @@ for col in features:
     if X[col].isna().all():
         X[col] = 0
     else:
-        X[col].fillna(X[col].median(), inplace=True)
+        X[col] = X[col].fillna(X[col].median())
 
 # El ranking FIFA: menor número = mejor equipo → lo invertimos
 X['ranking_fifa'] = 1 / (X['ranking_fifa'] + 1)

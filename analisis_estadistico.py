@@ -9,6 +9,9 @@ Esto es lo que diferencia un proyecto de Big Data de uno básico:
   - Interpretación automática de resultados
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
@@ -40,7 +43,7 @@ for col in features:
     if X[col].isna().all():
         X[col] = 0
     else:
-        X[col].fillna(X[col].median(), inplace=True)
+        X[col] = X[col].fillna(X[col].median())
 y = pd.to_numeric(y, errors='coerce').fillna(0).astype(int)
 
 # Normalizar ranking (menor rank = mejor → invertir)

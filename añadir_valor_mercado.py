@@ -13,6 +13,9 @@ Uso:
   python añadir_valor_mercado.py
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 
 print("💰 Añadiendo valor de mercado al dataset...")
