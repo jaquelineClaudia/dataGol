@@ -5,7 +5,7 @@ Dashboard interactivo del proyecto dataGol — Predictor del Mundial 2026.
 Ejecutar con: streamlit run dashboard.py
 """
 
-import streamlit as st
+import streamlit as st  # pyright: ignore[reportMissingImports]
 import pandas as pd
 import numpy as np
 import os
