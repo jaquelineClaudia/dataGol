@@ -9,6 +9,8 @@ import streamlit as st  # pyright: ignore[reportMissingImports]
 import pandas as pd
 import numpy as np
 import os
+import subprocess
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -130,6 +132,8 @@ def cargar_datos():
         'metricas'       : 'metricas_modelos.csv',
         'backtesting'    : 'backtesting_resultados.csv',
         'simulacion'     : 'simulacion_monte_carlo_2026.csv',
+        'bracket'        : 'bracket_simulado.csv',
+        'fases'          : 'probabilidades_por_fase.csv',
     }
     data = {}
     for key, path in archivos.items():
@@ -231,9 +235,10 @@ st.sidebar.markdown(f"""
 # ─────────────────────────────────────────────
 # TABS PRINCIPALES
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏆 Favoritos 2026",
     "🎲 Monte Carlo",
+    "🗺️ Bracket Simulado",
     "📊 Feature Importance",
     "⏱️ Backtesting",
     "🔬 Comparativa Modelos"
@@ -420,9 +425,113 @@ with tab2:
                 st.dataframe(sim_show, use_container_width=True, height=450)
 
 # ════════════════════════════════════════════
-# TAB 3: FEATURE IMPORTANCE
+# TAB 3: BRACKET SIMULADO
 # ════════════════════════════════════════════
 with tab3:
+    st.subheader("Bracket Simulado — Mundial 2026")
+    st.caption("Simulacion partido a partido del torneo completo y probabilidades por fase")
+
+    col_btn, col_msg = st.columns([1, 3])
+    with col_btn:
+        if st.button("Simular de nuevo", type="primary"):
+            with st.spinner("Generando un nuevo bracket aleatorio..."):
+                try:
+                    cmd = [sys.executable, "simulacion_bracket.py", "--only-bracket"]
+                    subprocess.run(cmd, check=True, capture_output=True, text=True)
+                    st.cache_data.clear()
+                    st.success("Nuevo bracket generado en bracket_simulado.csv")
+                    st.rerun()
+                except subprocess.CalledProcessError as e:
+                    err = (e.stderr or e.stdout or str(e)).splitlines()[-1]
+                    st.error(f"No se pudo generar el bracket: {err}")
+
+    bracket_df = data.get('bracket')
+    fases_df = data.get('fases')
+
+    if bracket_df is None:
+        st.warning("Ejecuta `python simulacion_bracket.py` para generar bracket_simulado.csv")
+    else:
+        fase_label = {
+            'R32': 'Octavos (R32)',
+            'R16': 'Cuartos (R16)',
+            'QF': 'Semifinales (QF)',
+            'SF': 'Final (SF)',
+            'F': 'Final'
+        }
+        ko = bracket_df[bracket_df['fase'].isin(['R32', 'R16', 'QF', 'SF', 'F'])].copy()
+        ko['fase_orden'] = ko['fase'].map({'R32': 1, 'R16': 2, 'QF': 3, 'SF': 4, 'F': 5})
+        ko = ko.sort_values(['fase_orden', 'match_id'])
+
+        st.markdown("**Camino del torneo hasta la final**")
+        fases = ['R32', 'R16', 'QF', 'SF', 'F']
+        cols = st.columns(len(fases))
+        for i, fase in enumerate(fases):
+            with cols[i]:
+                st.markdown(f"**{fase_label[fase]}**")
+                fx = ko[ko['fase'] == fase]
+                if fx.empty:
+                    st.caption("Sin datos")
+                    continue
+                for _, r in fx.iterrows():
+                    extra = " (P)" if str(r.get('metodo', '')) == 'penales' else ""
+                    st.markdown(
+                        f"<div style='background:{BG_CARD};border:1px solid {GOLD}33;"
+                        f"border-radius:8px;padding:0.55rem;margin-bottom:0.45rem;font-size:0.80rem;'>"
+                        f"<b>{r['equipo_1']}</b> {int(r['goles_1'])} - {int(r['goles_2'])} <b>{r['equipo_2']}</b><br>"
+                        f"<span style='color:{GOLD};'>Ganador: {r['ganador']}{extra}</span>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+
+        final_row = ko[ko['fase'] == 'F']
+        if not final_row.empty:
+            campeon = final_row.iloc[0]['ganador']
+            st.markdown(
+                f"<div style='text-align:center; margin-top:0.7rem; color:{GOLD}; font-weight:800; font-size:1.2rem;'>"
+                f"Campeon simulado: {campeon}</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<hr class='gold'>", unsafe_allow_html=True)
+
+    if fases_df is None:
+        st.warning("Ejecuta `python simulacion_bracket.py` para generar probabilidades_por_fase.csv")
+    else:
+        fdf = fases_df.copy()
+        if conf_sel != 'Todas' and 'Equipo' in fdf.columns and not prob_df.empty:
+            conf_map = prob_df.set_index('equipo')['confederacion'].to_dict()
+            fdf['confederacion'] = fdf['Equipo'].map(conf_map)
+            fdf = fdf[fdf['confederacion'] == conf_sel]
+
+        st.markdown("**Top 10 equipos con mayor probabilidad de campeon**")
+        top10 = fdf.sort_values('P_Gana_Mundial_%', ascending=False).head(10)[
+            ['Equipo', 'P_Gana_Mundial_%', 'P_Llega_Final_%', 'P_Llega_Semis_%', 'P_Llega_Cuartos_%']
+        ]
+        st.dataframe(top10, use_container_width=True, height=360)
+
+        st.markdown("**Probabilidades por fase (todos los equipos)**")
+        show_cols = [
+            'Equipo',
+            'P_Gana_Grupo_%',
+            'P_Clasifica_Eliminatoria_%',
+            'P_Llega_Octavos_%',
+            'P_Llega_Cuartos_%',
+            'P_Llega_Semis_%',
+            'P_Llega_Final_%',
+            'P_Gana_Mundial_%',
+        ]
+        show_cols = [c for c in show_cols if c in fdf.columns]
+        st.dataframe(
+            fdf.sort_values('P_Gana_Mundial_%', ascending=False)[show_cols],
+            use_container_width=True,
+            height=500,
+        )
+
+
+# ════════════════════════════════════════════
+# TAB 4: FEATURE IMPORTANCE
+# ════════════════════════════════════════════
+with tab4:
     st.subheader("Importancia de Variables — Random Forest")
     st.caption("Contribución de cada variable al poder predictivo del modelo")
 
@@ -507,9 +616,9 @@ with tab3:
 
 
 # ════════════════════════════════════════════
-# TAB 4: BACKTESTING
+# TAB 5: BACKTESTING
 # ════════════════════════════════════════════
-with tab4:
+with tab5:
     st.subheader("Backtesting Histórico — ¿Cómo hubiera funcionado el modelo?")
     st.caption("Entrenado con datos hasta N-4 años, predice el ganador del siguiente Mundial")
 
@@ -583,9 +692,9 @@ with tab4:
 
 
 # ════════════════════════════════════════════
-# TAB 5: COMPARATIVA DE MODELOS
+# TAB 6: COMPARATIVA DE MODELOS
 # ════════════════════════════════════════════
-with tab5:
+with tab6:
     st.subheader("Comparativa de Modelos — AUC-ROC (validación cruzada 5-fold)")
     st.caption("Área bajo la curva ROC: mide la capacidad del modelo para distinguir "
                "campeones de no campeones. Mayor = mejor.")
