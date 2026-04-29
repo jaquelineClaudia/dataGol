@@ -267,9 +267,10 @@ git push origin main
 
 ### Paso 2 — Crear cuenta en Streamlit Cloud
 
-1. Ve a **[share.streamlit.io](https://share.streamlit.io)**
+1. Ve a **[share.streamlit.io](https://share.streamlit.io)** 
 2. Haz clic en **"Sign up"** → selecciona **"Continue with GitHub"**
 3. Autoriza el acceso a tu cuenta de GitHub
+4. https://datagol.streamlit.app 
 
 ### Paso 3 — Desplegar la app
 
