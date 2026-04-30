@@ -272,7 +272,7 @@ print(f"\n  🎯 FAVORITO 2026 → {ranking.iloc[0]['equipo']}  "
 print(f"\n\n  📈 COMPARATIVA DE MODELOS")
 print("  " + "─" * 55)
 for _, row in comparativa.iterrows():
-    if row['AUC_ROC_media'] is not None:
+    if pd.notna(row['AUC_ROC_media']):
         barra = "█" * int(row['AUC_ROC_media'] * 50)
         print(f"  {row['Modelo']:<25} {barra} {row['AUC_ROC_display']}")
     else:

@@ -1,3 +1,3 @@
 Mundial,Datos_hasta,Ganador_Real,Prediccion_1,Prediccion_2,Prediccion_3,Prediccion_4,Prediccion_5,Puesto_Ganador_Real,Probabilidad_Ganador_%,Acierto_Top1,Acierto_Top3,Acierto_Top5,Prob_1_%,Prob_2_%,Prob_3_%
-2018,2014,France,Spain,Brazil,England,Germany,France,5,89.8,False,False,True,96.7,95.6,91.7
-2022,2018,Argentina,Brazil,Spain,France,England,Argentina,5,85.8,False,False,True,95.0,93.3,88.6
+2018,2014,France,Spain,Brazil,Germany,France,England,4,90.8,False,False,True,95.8,95.0,91.6
+2022,2018,Argentina,Brazil,Spain,France,England,Argentina,5,85.7,False,False,True,95.4,93.4,88.9

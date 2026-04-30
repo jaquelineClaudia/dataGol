@@ -341,6 +341,92 @@ for col in num_cols:
     else:
         df_final[col].fillna(df_final[col].median(), inplace=True)
 
+# Filtrar solo los 48 equipos clasificados al Mundial 2026 desde equipos_mundial.csv.
+try:
+    equipos_mundial_2026 = pd.read_excel('equipos_mundial.csv', sheet_name='mundial')
+except Exception:
+    equipos_mundial_2026 = read_csv_auto('equipos_mundial.csv')
+
+col_equipo_mundial = None
+for candidata in ['Seleccion', 'Equipo', 'equipo', 'country_full', 'pais']:
+    if candidata in equipos_mundial_2026.columns:
+        col_equipo_mundial = candidata
+        break
+
+if col_equipo_mundial is None:
+    raise ValueError("No se encontro una columna de equipos en equipos_mundial.csv")
+
+mapa_nombres = {
+    'Francia': 'France',
+    'Espana': 'Spain',
+    'España': 'Spain',
+    'Inglaterra': 'England',
+    'Brasil': 'Brazil',
+    'Paises Bajos': 'Netherlands',
+    'Países Bajos': 'Netherlands',
+    'Marruecos': 'Morocco',
+    'Belgica': 'Belgium',
+    'Bélgica': 'Belgium',
+    'Alemania': 'Germany',
+    'Croacia': 'Croatia',
+    'Senegal': 'Senegal',
+    'Mexico': 'Mexico',
+    'México': 'Mexico',
+    'EE. UU.': 'United States',
+    'Japon': 'Japan',
+    'Japón': 'Japan',
+    'Suiza': 'Switzerland',
+    'Iran': 'Iran',
+    'Irán': 'Iran',
+    'Turquia': 'Turkey',
+    'Turquía': 'Turkey',
+    'Corea del Sur': 'South Korea',
+    'Argelia': 'Algeria',
+    'Egipto': 'Egypt',
+    'Canada': 'Canada',
+    'Canadá': 'Canada',
+    'Noruega': 'Norway',
+    'Panama': 'Panama',
+    'Panamá': 'Panama',
+    'Costa de Marfil': 'Ivory Coast',
+    'Suecia': 'Sweden',
+    'Republica Checa': 'Czech Republic',
+    'República Checa': 'Czech Republic',
+    'Escocia': 'Scotland',
+    'Tunez': 'Tunisia',
+    'Túnez': 'Tunisia',
+    'RD Congo': 'DR Congo',
+    'Uzbekistan': 'Uzbekistan',
+    'Uzbekistán': 'Uzbekistan',
+    'Catar': 'Qatar',
+    'Irak': 'Iraq',
+    'Sudafrica': 'South Africa',
+    'Sudáfrica': 'South Africa',
+    'Arabia Saudita': 'Saudi Arabia',
+    'Jordania': 'Jordan',
+    'Bosnia y Herzegovina': 'Bosnia and Herzegovina',
+    'Cabo Verde': 'Cape Verde',
+    'Curazao': 'Curaçao',
+    'Haiti': 'Haiti',
+    'Haití': 'Haiti',
+    'Nueva Zelanda': 'New Zealand',
+}
+
+equipos_clasificados = (
+    equipos_mundial_2026[col_equipo_mundial]
+    .dropna()
+    .astype(str)
+    .str.strip()
+    .replace(mapa_nombres)
+)
+equipos_clasificados = set(equipos_clasificados)
+
+filas_antes = len(df_final)
+df_final = df_final[df_final['equipo'].isin(equipos_clasificados)].copy()
+filas_eliminadas = filas_antes - len(df_final)
+print(f"\n🧹 Filtro Mundial 2026 aplicado: {filas_eliminadas} equipos eliminados")
+print(f"   Equipos conservados: {len(df_final)}")
+
 df_final.to_csv('dataset_modelo.csv', index=False)
 
 print(f"\n✅ Dataset final guardado: dataset_modelo.csv")

@@ -1,0 +1,5 @@
+Modelo,AUC_ROC_media,AUC_ROC_std,AUC_ROC_display,Peso_Ensemble_%
+Regresión Logística,0.925,0.0612,0.9250 ± 0.0612,34.7
+Random Forest,0.925,0.1,0.9250 ± 0.1000,34.7
+XGBoost,0.8125,0.285,0.8125 ± 0.2850,30.5
+Ensemble (ponderado),,,Promedio ponderado (34.7% LR / 34.7% RF / 30.5% XGB),100.0
