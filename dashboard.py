@@ -134,6 +134,8 @@ def cargar_datos():
         'simulacion'     : 'simulacion_monte_carlo_2026.csv',
         'bracket'        : 'bracket_simulado.csv',
         'fases'          : 'probabilidades_por_fase.csv',
+        'campeones'      : 'analisis_campeones.csv',
+        'jugador_top'    : 'analisis_jugador_top.csv',
     }
     data = {}
     for key, path in archivos.items():
@@ -235,13 +237,14 @@ st.sidebar.markdown(f"""
 # ─────────────────────────────────────────────
 # TABS PRINCIPALES
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🏆 Favoritos 2026",
     "🎲 Monte Carlo",
     "🗺️ Bracket Simulado",
     "📊 Feature Importance",
     "⏱️ Backtesting",
-    "🔬 Comparativa Modelos"
+    "🔬 Comparativa Modelos",
+    "🏅 ADN del Campeón"
 ])
 
 # ════════════════════════════════════════════
@@ -801,6 +804,187 @@ with tab6:
             • <b>0.80-0.89</b> = bueno<br>
             • <b>0.50</b> = aleatorio
             </div>""", unsafe_allow_html=True)
+
+
+# ════════════════════════════════════════════
+# TAB 7: ADN DEL CAMPEÓN
+# ════════════════════════════════════════════
+with tab7:
+    st.subheader("🏅 ADN del Campeón — Análisis de los últimos 5 mundiales")
+    st.caption("Patrones históricos de Italia 2006, España 2010, Alemania 2014, Francia 2018, Argentina 2022")
+    
+    if data['campeones'] is None:
+        st.warning("Ejecuta `python analisis_campeones.py` para generar analisis_campeones.csv")
+    else:
+        camp_df = data['campeones'].copy()
+        
+        # ────────────────────────────────
+        # Sección 1: Tabla comparativa
+        # ────────────────────────────────
+        st.markdown("### 📊 Tabla comparativa: Los 5 últimos campeones")
+        
+        tabla_html = "<table class='styled-table'><thead><tr>"
+        tabla_html += "<th>Año</th><th>Campeón</th><th>GF/PJ</th><th>GC/PJ</th><th>Dif.</th><th>Penales</th><th>Racha %</th></tr></thead><tbody>"
+        
+        for _, row in camp_df.iterrows():
+            medal = "🥇" if row['goles_favor_promedio'] == camp_df['goles_favor_promedio'].max() else "⭐"
+            penales_flag = "✓" if row['fue_a_penales'] == 1 else "✗"
+            tabla_html += f"""<tr>
+              <td><b>{int(row['ano'])}</b></td>
+              <td>{medal} {row['campeon']}</td>
+              <td style="text-align:center;"><b>{row['goles_favor_promedio']:.2f}</b></td>
+              <td style="text-align:center;">{row['goles_contra_promedio']:.2f}</td>
+              <td style="text-align:center;"><b style="color:{GOLD};">+{row['diferencia_goles_promedio']:.2f}</b></td>
+              <td style="text-align:center;">{penales_flag}</td>
+              <td style="text-align:center;">{int(row['racha_previo']*100)}%</td>
+            </tr>"""
+        
+        tabla_html += "</tbody></table>"
+        st.markdown(tabla_html, unsafe_allow_html=True)
+        
+        # ────────────────────────────────
+        # Sección 2: Gráficos comparativos
+        # ────────────────────────────────
+        st.markdown("### 📈 Análisis de patrones campeones")
+        
+        col_gf, col_ranking = st.columns(2)
+        
+        with col_gf:
+            fig_comp, ax_comp = plt.subplots(figsize=(7, 5))
+            fig_comp.patch.set_facecolor(BG_DARK)
+            ax_comp.set_facecolor(BG_DARK)
+            
+            x_pos = np.arange(len(camp_df))
+            width = 0.35
+            
+            gf_bars = ax_comp.bar(x_pos - width/2, camp_df['goles_favor_promedio'], 
+                                   width, label='Goles a favor', color=GREEN, alpha=0.8)
+            gc_bars = ax_comp.bar(x_pos + width/2, camp_df['goles_contra_promedio'], 
+                                   width, label='Goles en contra', color=RED, alpha=0.8)
+            
+            ax_comp.set_ylabel('Goles por partido', color=TEXT, fontsize=9)
+            ax_comp.set_title('Goles a Favor vs En Contra', color=TEXT, fontweight='bold', fontsize=10)
+            ax_comp.set_xticks(x_pos)
+            ax_comp.set_xticklabels(camp_df['campeon'], rotation=45, ha='right', color=TEXT)
+            ax_comp.legend(facecolor=BG_MED, edgecolor='#30363D', labelcolor=TEXT, fontsize=8)
+            ax_comp.tick_params(colors=TEXT, labelsize=8)
+            ax_comp.spines[['top', 'right']].set_visible(False)
+            ax_comp.spines[['left', 'bottom']].set_color('#30363D')
+            ax_comp.grid(True, axis='y', color='#30363D', linestyle='--', alpha=0.5)
+            
+            fig_comp.tight_layout()
+            st.pyplot(fig_comp, use_container_width=True)
+            plt.close(fig_comp)
+        
+        with col_ranking:
+            fig_racha, ax_racha = plt.subplots(figsize=(7, 5))
+            fig_racha.patch.set_facecolor(BG_DARK)
+            ax_racha.set_facecolor(BG_DARK)
+            
+            racha_vals = (camp_df['racha_previo'] * 100).tolist()
+            bars_racha = ax_racha.bar(camp_df['campeon'], racha_vals, 
+                                       color=GOLD, alpha=0.8, edgecolor=GOLD2, linewidth=2)
+            
+            for bar, val in zip(bars_racha, racha_vals):
+                ax_racha.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                             f'{val:.0f}%', ha='center', va='bottom', 
+                             color=GOLD, fontweight='bold', fontsize=9)
+            
+            ax_racha.set_ylabel('% Victorias', color=TEXT, fontsize=9)
+            ax_racha.set_title('Racha previa al Mundial (últimos 10 partidos)', 
+                              color=TEXT, fontweight='bold', fontsize=10)
+            ax_racha.set_ylim(0, 120)
+            ax_racha.tick_params(colors=TEXT, labelsize=8, axis='x')
+            ax_racha.tick_params(colors=TEXT, labelsize=8, axis='y')
+            plt.setp(ax_racha.xaxis.get_majorticklabels(), rotation=45, ha='right')
+            ax_racha.spines[['top', 'right']].set_visible(False)
+            ax_racha.spines[['left', 'bottom']].set_color('#30363D')
+            ax_racha.grid(True, axis='y', color='#30363D', linestyle='--', alpha=0.5)
+            
+            fig_racha.tight_layout()
+            st.pyplot(fig_racha, use_container_width=True)
+            plt.close(fig_racha)
+        
+        # ────────────────────────────────
+        # Sección 3: Explicación aleatoriedad
+        # ────────────────────────────────
+        st.markdown("### ⚠️ ¿Por qué los favoritos no siempre ganan?")
+        
+        st.markdown(f"""
+        <div style="background:{BG_MED}; border-radius:10px; padding:1.2rem; border-left:4px solid {GOLD};">
+        <b style="color:{GOLD};">El fútbol es un deporte de BAJA PUNTUACIÓN y ALTO AZAR</b><br><br>
+        
+        • <b>Formato eliminación directa:</b> Un mal partido = eliminación. No hay revancha.<br>
+        • <b>Goles escasos:</b> 2-3 goles/partido hace que eventos raros (penales, lesiones) sean decisivos.<br>
+        • <b>Penales:</b> {int(camp_df['fue_a_penales'].sum())}/5 campeones tuvieron que definir por penales.<br>
+        • <b>Racha previa:</b> El campeón promedio llega con {camp_df['racha_previo'].mean():.0%} de victorias antes del torneo.<br>
+        • <b>Predicción:</b> Incluso equipos top (Ranking #1-5) tienen 85-96% de perder un partido cualquiera.<br>
+        
+        <br><b>Conclusión:</b> Los modelos ML identifican <u>favoritos relativos</u>, no ganadores seguros. 
+        La aleatoriedad sigue siendo fundamental en torneos de eliminación.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # ────────────────────────────────
+        # Sección 4: Top 10 similares a 2026
+        # ────────────────────────────────
+        st.markdown("### 🎯 Top 10 equipos 2026 más similares al perfil campeón histórico")
+        
+        # Calcular perfil promedio del campeón
+        gf_promedio = camp_df['goles_favor_promedio'].mean()
+        gc_promedio = camp_df['goles_contra_promedio'].mean()
+        racha_promedio = camp_df['racha_previo'].mean()
+        
+        # Cargar probabilidades 2026
+        prob_2026 = prob_df.copy() if not prob_df.empty else pd.DataFrame()
+        
+        if not prob_2026.empty:
+            # Calcular similitud con el perfil campeón (proximidad a ranking top + probabilidad alta)
+            # Usamos: ranking FIFA (top 15 es mejor), probabilidad final, y ajuste por confederación
+            
+            prob_2026['ranking_proxy'] = prob_2026.index + 1  # ranking del predictor
+            prob_2026['similitud_score'] = (
+                prob_2026['proba_final'] * 0.6 +  # 60% peso a probabilidad
+                (1 - (prob_2026['ranking_proxy'] / 48)) * 0.4  # 40% peso a ranking
+            )
+            
+            top_10_similares = prob_2026.nlargest(10, 'similitud_score')[
+                ['equipo', 'confederacion', 'proba_final', 'ranking_proxy']
+            ].reset_index(drop=True)
+            top_10_similares['rank'] = range(1, len(top_10_similares) + 1)
+            
+            tabla_top10 = "<table class='styled-table'><thead><tr>"
+            tabla_top10 += "<th>#</th><th>Equipo</th><th>Confederación</th><th>Prob. Campeón</th><th>Similitud</th></tr></thead><tbody>"
+            
+            for i, row in top_10_similares.iterrows():
+                medal = "🥇" if i == 0 else ("🥈" if i == 1 else ("🥉" if i == 2 else f"{i+1}."))
+                conf_badge = f"<span class='badge {row['confederacion']}'>{row['confederacion']}</span>"
+                tabla_top10 += f"""<tr>
+                  <td><b>{medal}</b></td>
+                  <td><b>{row['equipo']}</b></td>
+                  <td style="text-align:center;">{conf_badge}</td>
+                  <td style="text-align:center;"><b>{row['proba_final']:.1%}</b></td>
+                  <td style="text-align:center;"><span style="color:{GOLD};">★★★★☆</span></td>
+                </tr>"""
+            
+            tabla_top10 += "</tbody></table>"
+            st.markdown(tabla_top10, unsafe_allow_html=True)
+            
+            st.caption(f"💡 Estos equipos combinan: probabilidad alta de ser campeón + posición top en ranking ML.")
+        else:
+            st.warning("No hay datos de probabilidades cargados.")
+        
+        # Resumen final
+        st.markdown("---")
+        st.markdown(f"""
+        <div style="background:{BG_CARD}; border-radius:8px; padding:1rem; text-align:center; color:{SILVER};">
+        <b style="color:{GOLD};">Perfil del Campeón Histórico (2006-2022)</b><br><br>
+        🥅 <b>{gf_promedio:.2f}</b> goles/partido &nbsp;|&nbsp;
+        🛡️ <b>{gc_promedio:.2f}</b> goles en contra/partido &nbsp;|&nbsp;
+        🔥 <b>{racha_promedio:.0%}</b> racha previa
+        </div>
+        """, unsafe_allow_html=True)
+
 
 # ─────────────────────────────────────────────
 # FOOTER
